@@ -1,0 +1,26 @@
+{
+  "name": "seroboard_backend",
+  "version": "1.0.0",
+  "description": "this project contains the backend of the seroboard web application. This will let the application connect to the database and also perform crud operations on the database.",
+  "main": "database.js",
+  "type": "module",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node database.js"
+  },
+  "keywords": [
+    "backend",
+    "seroboard",
+    "node",
+    "express",
+    "mysql"
+  ],
+  "author": "Prithvi Varma Nallapuraju, Achin Dwivedi, Gokul Raghavendran",
+  "license": "ISC",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.17.3",
+    "mysql": "^2.18.1",
+    "nodemon": "^2.0.15"
+  }
+}
