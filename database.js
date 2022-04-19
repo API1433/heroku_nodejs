@@ -33,6 +33,16 @@ app.get('/cors', (req, res) => {
 
 // const response = await fetch('http://localhost:3005/cors', { mode: 'cors' });
 
+// var mysqlConnection = mysql.createConnection({
+//     host: "localhost",
+//     port: "3306",
+//     user: "root",
+//     password: "password",
+//     database: "seroboard",
+//     multipleStatements: true
+// })
+
+
 var mysqlConnection = mysql.createConnection({
     host: "database-1.cfq4riwekent.ap-south-1.rds.amazonaws.com",
     port: "3306",
@@ -50,6 +60,8 @@ mysqlConnection.connect(err => {
 })
 const port =process.env.PORT||3005
 app.listen(port)
+
+//app.listen(3005)
 
 
 
@@ -71,7 +83,7 @@ app.post("/login", (req, res) => {
                     finalRow;
 
                 if (finalRow === user.email)
-                    mysqlConnection.query(`SELECT sp_username as UserName, sp_roles as Role FROM seroboard.s_people where sp_email="${user.email}"`,
+                    mysqlConnection.query(`SELECT sp_id as UserId, sp_username as UserName, sp_email as Email, sp_roles as Role FROM seroboard.s_people where sp_email="${user.email}"`,
                         (err, rows) => res.send(rows))
                 else
                     res.send('Authentication Unsuccessfull')
@@ -240,7 +252,13 @@ app.post('/insertBatch', (req, res) => {
 //Get the details of all the batches
 
 app.get('/getBatches', (req, res) => {
-    mysqlConnection.query(`select sad.sad_batch_id as BatchId, sad.sad_batch_name as BatchName,DATE_FORMAT(sad.sad_batch_start_date, '%Y-%m-%d') as StartDate, DATE_FORMAT(sad.sad_batch_end_date,'%Y-%m-%d') as EndDate,s1.sp_email as InstructorEmail, s1.sp_username as Instructor,s2.sp_email as CoordinatorEmail,s2.sp_username as Coordinator,sad.sad_batch_course as Course, sad.sad_total_weeks as Duration from seroboard.s_admin_batch sad, seroboard.s_people s1,seroboard.s_people s2 where sad.sad_sp_id_inst = s1.sp_id and sad.sad_sp_id_coor = s2.sp_id;`,
+    mysqlConnection.query(`select sad.sad_batch_id as BatchId, sad.sad_batch_name as BatchName, 
+    DATE_FORMAT(sad.sad_batch_start_date, '%Y-%m-%d') as StartDate, DATE_FORMAT(sad.sad_batch_end_date,'%Y-%m-%d') as EndDate, 
+    s1.sp_email as InstructorEmail, s1.sp_username as Instructor,s2.sp_email as CoordinatorEmail, 
+    s2.sp_username as Coordinator,
+    sad.sad_batch_course as Course, sad.sad_total_weeks as Duration 
+    from seroboard.s_admin_batch sad, seroboard.s_people s1,seroboard.s_people s2 
+    where sad.sad_sp_id_inst = s1.sp_id and sad.sad_sp_id_coor = s2.sp_id`,
         (err, row) => {
             if (err) {
                 console.log(err)
@@ -251,13 +269,35 @@ app.get('/getBatches', (req, res) => {
         })
 })
 
+// Get Batch list by Instructor/ Co-oridinator Id
+
 //Get the details of all the batches of Co-ordinator
+
+app.get('/getBatches/:id', (req, res) => {
+    const id = req.params.id;
+    mysqlConnection.query(`select sad.sad_batch_id as BatchId, sad.sad_batch_name as BatchName, 
+    sad.sad_batch_start_date as StartDate, sad.sad_batch_end_date as EndDate, 
+    s1.sp_email as InstructorEmail, s1.sp_username as Instructor,s2.sp_email as CoordinatorEmail, 
+    s2.sp_username as Coordinator,
+    sad.sad_batch_course as Course, sad.sad_total_weeks as Duration 
+    from seroboard.s_admin_batch sad, seroboard.s_people s1,seroboard.s_people s2 
+    where sad.sad_sp_id_inst = s1.sp_id and sad.sad_sp_id_coor = s1.sp_id and s1.sp_id=${id}`,
+        (err, row) => {
+            if (err) {
+                console.log(err)
+                res.send("unable to fetch the batches")
+            }
+            else
+                res.send({ "batches": row })
+        })
+})
 
 app.get('/getBatchesCor/:id', (req, res) => {
     const id = req.params.id
     mysqlConnection.query(`select sad.sad_batch_id as BatchId, sad.sad_batch_name as BatchName, 
-    sad.sad_batch_start_date as StartDate, sad.sad_batch_end_date as EndDate, 
-    s1.sp_email as InstructorEmail,s2.sp_email as CoordinatorEmail, 
+    DATE_FORMAT(sad.sad_batch_start_date, '%Y-%m-%d') as StartDate, DATE_FORMAT(sad.sad_batch_end_date,'%Y-%m-%d') as EndDate, 
+    s1.sp_email as InstructorEmail, s1.sp_username as Instructor, s2.sp_email as CoordinatorEmail, 
+    s2.sp_username as Coordinator,
     sad.sad_batch_course as Course, sad.sad_total_weeks as Duration from 
     seroboard.s_admin_batch sad, seroboard.s_people s1,seroboard.s_people s2 where 
     sad.sad_sp_id_inst = s1.sp_id and sad.sad_sp_id_coor = s2.sp_id and sad.sad_sp_id_coor=${id}`,
@@ -276,8 +316,9 @@ app.get('/getBatchesCor/:id', (req, res) => {
 app.get('/getBatchesIns/:id', (req, res) => {
     const id = req.params.id
     mysqlConnection.query(`select sad.sad_batch_id as BatchId, sad.sad_batch_name as BatchName, 
-    sad.sad_batch_start_date as StartDate, sad.sad_batch_end_date as EndDate, 
-    s1.sp_email as InstructorEmail,s2.sp_email as CoordinatorEmail, 
+    DATE_FORMAT(sad.sad_batch_start_date, '%Y-%m-%d') as StartDate, DATE_FORMAT(sad.sad_batch_end_date,'%Y-%m-%d') as EndDate, 
+    s1.sp_email as InstructorEmail, s1.sp_username as Instructor, s2.sp_email as CoordinatorEmail,
+    s2.sp_username as Coordinator, 
     sad.sad_batch_course as Course, sad.sad_total_weeks as Duration from 
     seroboard.s_admin_batch sad, seroboard.s_people s1,seroboard.s_people s2 where 
     sad.sad_sp_id_inst = s1.sp_id and sad.sad_sp_id_coor = s2.sp_id and sad.sad_sp_id_inst=${id}`,
@@ -293,25 +334,24 @@ app.get('/getBatchesIns/:id', (req, res) => {
 
 // Get Batch By Id
 
-app.get('/getBatch/:id', (req,res)=>{
+app.get('/getBatch/:id', (req, res) => {
     const id = req.params.id
-    mysqlConnection.query(`SELECT ss_id as ID, ss_employee_id as EmployeeId, ss_email_id as EmailId, ss_name as Name, ss_work_location as Location, ss_phone_number as PhoneNumber, ss_designation as Designation FROM seroboard.s_students WHERE ss_sad_batch_id = ${id};SELECT s1.sp_id as InstructorId, s1.sp_username as InstructorName, s2.sp_id as CoordinatorId, s2.sp_username as CoordinatorName, sab.sad_batch_id as BatchId, sab.sad_batch_name as BatchName, DATE_FORMAT(sab.sad_batch_start_date, '%Y-%m-%d') as BatchStartDate, DATE_FORMAT(sab.sad_batch_end_date,'%Y-%m-%d') as BatchEndDate, sab.sad_batch_course as Course, sab.sad_total_weeks as Duration FROM seroboard.s_people s1, seroboard.s_people s2, seroboard.s_admin_batch sab where sab.sad_batch_id = ${id} and sab.sad_sp_id_inst = s1.sp_id and sab.sad_sp_id_coor = s2.sp_id `, (err,rows)=>{
-        if(err)
-            {
-                console.log(err)
-                res.send("unable to get student details")
-            }
-        else
-        {
+    mysqlConnection.query(`SELECT ss_id as ID, ss_employee_id as EmployeeId, ss_email_id as EmailId, ss_name as Name, ss_work_location as Location, ss_phone_number as PhoneNumber, ss_designation as Designation, ss_released as Released FROM seroboard.s_students WHERE ss_sad_batch_id = ${id};SELECT s1.sp_id as InstructorId, s1.sp_username as InstructorName, s1.sp_email as InsEmail, s2.sp_id as CoordinatorId, s2.sp_username as CoordinatorName, s2.sp_email as CorEmail, sab.sad_batch_id as BatchId, sab.sad_batch_name as BatchName, DATE_FORMAT(sab.sad_batch_start_date, '%Y-%m-%d') as BatchStartDate, DATE_FORMAT(sab.sad_batch_end_date,'%Y-%m-%d') as BatchEndDate, sab.sad_batch_course as Course, sab.sad_total_weeks as Duration FROM seroboard.s_people s1, seroboard.s_people s2, seroboard.s_admin_batch sab where sab.sad_batch_id = ${id} and sab.sad_sp_id_inst = s1.sp_id and sab.sad_sp_id_coor = s2.sp_id `, (err, rows) => {
+        if (err) {
+            console.log(err)
+            res.send("unable to get student details")
+        }
+        else {
             res.status(200).json({
-                 status: {
-                       success: true,
-                        code: 200,
-                        message: "authorised"
-            }, data: { rows }
-        })
-       }
-})})
+                status: {
+                    success: true,
+                    code: 200,
+                    message: "authorised"
+                }, data: { rows }
+            })
+        }
+    })
+})
 
 
 
@@ -370,7 +410,6 @@ app.patch('/updateBatch', (req, res) => {
     })
 })
 
-
 /* ------------------------------------ Personal Details ------------------------------------- */
 
 //to update the personal details
@@ -388,7 +427,7 @@ app.patch('/updatePersonalDetails', (req, res) => {
 
 
 //to get the personal details
-app.get('/getPersonalDetails', (req, res) => {
+app.post('/getPersonalDetails', (req, res) => {
     const personal = req.body
     mysqlConnection.query(`SELECT spd_first_name as FirstName, spd_last_name as LastName, spd_employee_id as EmployeeId, spd_email_id as EmailId, spd_role as Role, spd_phone_number as PhoneNumber, spd_work_location as WorkLocation, spd_designation as Designation FROM seroboard.s_personal_details WHERE spd_email_id = "${personal.email}" AND spd_role = "${personal.role}"`, (err, rows) => {
         if (err) {
@@ -408,13 +447,31 @@ app.get('/getPersonalDetails', (req, res) => {
 //to add the details of the students
 app.post('/insertStudent', (req, res) => {
     const students = req.body
-    mysqlConnection.query(`INSERT INTO seroboard.s_students (ss_sad_batch_id, ss_employee_id, ss_email_id, ss_name, ss_work_location, ss_phone_number, ss_designation) VALUES ((SELECT sad_batch_id FROM seroboard.s_admin_batch WHERE sad_batch_id = ${students.batch_id}), "${students.employee_id}", "${students.email_id}", "${students.name}","${students.work_location}","${students.phone_number}","${students.designation}")`, err => {
-        if (err) {
-            console.log(err)
-            res.send("unable to add student details")
-        }
-        else
-            res.send("Student Added Successfully")
+    console.log("Student Array", students);
+    var sql = "SET @batch_id = ?; SET @employee_id = ?; SET @email_id = ?;SET @name = ?; SET @work_location = ?; SET @phone_number = ?; SET @designation = ?; CALL InsertANewStudent(@batch_id,@employee_id,@email_id,@name,@work_location,@phone_number,@designation)"
+    let i
+    for (i = 0; i < students.length; i++) {
+        mysqlConnection.query(sql, [parseInt(students[i].batch_id), students[i].employee_id, students[i].email_id, students[i].name, students[i].work_location, students[i].phone_number, students[i].designation], err => {
+            if (err) {
+                console.log(err)
+                res.status(400).json({
+                    status: {
+                        success: false,
+                        code: 400,
+                        message: "unauthorized"
+                    },
+                    data: "unable to update the Batch"
+                })
+            }
+        })
+    }
+    res.status(200).json({
+        status: {
+            success: true,
+            code: 200,
+            message: "authorised"
+        },
+        data: "Inserted batches " + i
     })
 })
 
@@ -458,6 +515,50 @@ app.patch('/updateStudent', (req, res) => {
             })
         }
     })
+})
+
+
+// Update Release date
+
+app.patch("/setReleased", (req, res) => {
+    const released = req.body
+    let i, count = 0
+    const sql = "SET @employee_id = ?; SET @released = ?; CALL setReleased(@employee_id,@released)"
+    for (i = 0; i < released.length; i++, count++) {
+        mysqlConnection.query(sql, [released[i].employee_id, released[i].released], err => {
+            if (err) {
+                console.log(err)
+                res.status(400).json({
+                    status: {
+                        success: false,
+                        code: 400,
+                        message: "Bad Request"
+                    },
+                    data: "unable to update the scores"
+                })
+            }
+        })
+    }
+    if (count === i) {
+        res.status(200).json({
+            status: {
+                success: true,
+                code: 200,
+                message: "success"
+            },
+            data: "Data Updated successfully"
+        })
+    }
+    else {
+        res.status(206).json({
+            status: {
+                success: false,
+                code: 206,
+                message: "Partial Data Updated"
+            },
+            data: "Partial data updated. Number of records " + i
+        })
+    }
 })
 
 
@@ -540,49 +641,145 @@ app.get('/getAttendanceOfBatch', (req, res) => {
 
 /* -------------------------------------------- instructor duties on student marks --------------------------------------- */
 
+
+// To get All Assesments
+
+app.get('/getAssesments', (req, res) => {
+    mysqlConnection.query(`select stt_id as testId, stt_test_name as testName 
+    from seroboard.s_test_type`,
+        (err, row) => {
+            if (err) {
+                console.log(err)
+                res.send("unable to fetch the tests")
+            }
+            else
+                res.send({ "tests": row })
+        })
+
+})
 //to insert the scores of students
 app.post('/insertMarks', (req, res) => {
     var marks = req.body
-    var sql = "SET @batch_id = ?; SET @employee_id = ?; SET @test_name = ?; SET @exam_date = ?; SET @marks = ?; CALL insertScoresOfStudents(@batch_id,@employee_id,@test_name,@exam_date,@marks)"
+    var sql = "SET @batch_id = ?; SET @employee_id = ?; SET @test_name = ?; SET @exam_date = ?; SET @marks = ?;SET @comments = ?; CALL insertScoresOfStudents(@batch_id,@employee_id,@test_name,@exam_date,@marks,@comments)"
     let i
     for (i = 0; i < marks.length; i++) {
-        mysqlConnection.query(sql, [marks[i].batch_id, marks[i].employee_id, marks[i].test_name, marks[i].exam_date, marks[i].marks], err => {
+        mysqlConnection.query(sql, [marks[i].batch_id, marks[i].employee_id, marks[i].test_name, marks[i].exam_date, marks[i].marks, marks[i].comments], err => {
             if (err) {
                 console.log(err)
-                res.send("unable to insert score of students")
+                res.status(400).json({
+                    status: {
+                        success: false,
+                        code: 400,
+                        message: "unauthorized"
+                    },
+                    data: "unable to insert the marks"
+                })
             }
         })
     }
-    res.send("Inserted attendance records are : " + i)
-})
-
-//to give the marks of all students of a particular batch based on the exam
-app.get('/getMarksByExam', (req, res) => {
-    const marks = req.body
-    mysqlConnection.query(`SELECT sab.sad_batch_name as BatchName, ss.ss_name as Name, stt.stt_test_name as ExamName, sm.sm_exam_date as ExamDate, sm.sm_marks as Marks FROM seroboard.s_marks sm, seroboard.s_admin_batch sab, seroboard.s_students ss, seroboard.s_test_type stt WHERE sm.sm_sad_batch_id = sab.sad_batch_id AND sm.sm_stt_test_id = stt.stt_test_id AND sm.sm_ss_id = ss.ss_id AND ss.ss_sad_batch_id = sab.sad_batch_id AND sm.sm_sad_batch_id = ${marks.batch_id} AND stt.stt_test_name = "${marks.test_name}";`, (err, row) => {
-        if (err) {
-            console.log(err)
-            res.send("unable to fetch the marks")
-        }
-        else
-            res.send(row)
+    res.status(200).json({
+        status: {
+            success: true,
+            code: 200,
+            message: "authorised"
+        }, data: "Inserted attendance records are : " + i
     })
 })
 
+//to give the marks of all students of a particular batch based on the exam
+app.post('/getMarksByExam', (req, res) => {
+    const marks = req.body
+    mysqlConnection.query(`SELECT ss.ss_id as Id, ss.ss_employee_id as EmpId, sab.sad_batch_name as BatchName, ss.ss_name as Name, stt.stt_test_name as ExamName, DATE_FORMAT(sm.sm_exam_date, '%Y-%m-%d') as ExamDate, sm.sm_marks as Marks, sm.sm_comments as Comments FROM seroboard.s_marks sm, seroboard.s_admin_batch sab, seroboard.s_students ss, seroboard.s_test_type stt WHERE sm.sm_sad_batch_id = sab.sad_batch_id AND sm.sm_stt_test_id = stt.stt_test_id AND sm.sm_ss_id = ss.ss_id AND ss.ss_sad_batch_id = sab.sad_batch_id AND sm.sm_sad_batch_id = ${marks.batch_id} AND stt.stt_test_name = "${marks.test_name}" AND sm.sm_exam_date = "${marks.test_date}" ;`, (err, row) => {
+        if (err) {
+            console.log(err)
+            res.status(400).json({
+                status: {
+                    success: false,
+                    code: 400,
+                    message: "unauthorized"
+                },
+                data: "unable to get the marks by an exam"
+            })
+        }
+        else {
+            res.status(200).json({
+                status: {
+                    success: true,
+                    code: 200,
+                    message: "authorised"
+                }, data: { row }
+            })
+        }
+    })
+})
 
 //to update the marks of a particular student based on the exam name
 app.patch("/updateScores", (req, res) => {
     const marks = req.body;
     mysqlConnection.query(
-        `UPDATE seroboard.s_marks SET sm_marks ="${marks.marks}" WHERE sm_ss_id=(SELECT ss_id FROM seroboard.s_students WHERE ss_employee_id="${marks.employee_id}" AND ss_sad_batch_id = ${marks.batch_id}) and sm_stt_test_id = (SELECT stt_test_id FROM seroboard.s_test_type where stt_test_name="${marks.test_name}" )`,
+        `UPDATE seroboard.s_marks SET sm_marks ="${marks.marks}", sm_exam_date = "${marks.date}", sm_comments = "${marks.comments}" WHERE sm_ss_id= (SELECT ss_id FROM seroboard.s_students where ss_employee_id="${marks.id}" and ss_sad_batch_id=${marks.batch_id} ) and sm_sad_batch_id = ${marks.batch_id} and sm_stt_test_id = (SELECT stt_test_id FROM seroboard.s_test_type where stt_test_name="${marks.test_name}" )`,
         (err) => {
             if (err) {
-                console.log(err);
-                res.send("unable to update the batch");
+                console.log(err)
+                res.status(400).json({
+                    status: {
+                        success: false,
+                        code: 400,
+                        message: "unauthorized"
+                    },
+                    data: "unable to update the marks of a student"
+                })
             }
-            else
-                res.send("score updated successfully");
+            else {
+                res.status(200).json({
+                    status: {
+                        success: true,
+                        code: 200,
+                        message: "authorised"
+                    }, data: "marks updated successfully"
+                })
+            }
         })
+})
+//Get Assesment by Batch Id
+app.get('/marksBy/:id', (req, res) => {
+    const marks = req.params.id
+    // sql = `SELECT distinct(sm_sad_batch_id), sm_stt_test_id, stt_test_name, sm_exam_date from seroboard.s_marks, seroboard.s_test_type where sm_stt_test_id = stt_test_id and sm_sad_batch_id = ${marks}`
+    mysqlConnection.query(`SELECT distinct(sm_sad_batch_id), sm_stt_test_id, stt_test_name, DATE_FORMAT(sm_exam_date, '%Y-%m-%d') as ExamDate from seroboard.s_marks, seroboard.s_test_type where sm_stt_test_id = stt_test_id and sm_sad_batch_id = ${marks}`, (err, row) => {
+        if (err) {
+            console.log(err)
+            res.status(400).json({
+                status: {
+                    success: false,
+                    code: 400,
+                    message: "Bad Request"
+                },
+                data: "unable to get the attendance and the date of the user"
+            })
+        }
+        else {
+            if (row.length > 0) {
+                res.status(200).json({
+                    status: {
+                        success: true,
+                        code: 200,
+                        message: "success"
+                    },
+                    data: { row }
+                })
+            }
+            else {
+                res.status(404).json({
+                    status: {
+                        success: false,
+                        code: 404,
+                        message: "data not found"
+                    },
+                    data: "no data found for the selected attendance"
+                })
+            }
+        }
+    })
 })
 
 // Get student by Id
@@ -684,6 +881,163 @@ app.get('/getStudentsPerCourse', (req, res) => {
     })
 })
 
-//to dispaly the total duration of each individual course
+// Get attendance by student id and batch id
+app.post('/attendanceDate', (req, res) => {
+    const marks = req.body
+    const sql = `select sa_present, sa_date from seroboard.s_attendance where sa_ss_id = ${marks.student_id} and sa_sad_batch_id = ${marks.batch_id};`
+    mysqlConnection.query(sql, (err, row) => {
+        if (err) {
+            console.log(err)
+            res.status(400).json({
+                status: {
+                    success: false,
+                    code: 400,
+                    message: "Bad Request"
+                },
+                data: "unable to get the attendance and the date of the user"
+            })
+        }
+        else {
+            if (row.length > 0) {
+                res.status(200).json({
+                    status: {
+                        success: true,
+                        code: 200,
+                        message: "success"
+                    },
+                    data: { row }
+                })
+            }
+            else {
+                res.status(404).json({
+                    status: {
+                        success: false,
+                        code: 404,
+                        message: "data not found"
+                    },
+                    data: "no data found for the selected attendance"
+                })
+            }
+        }
+    })
+})
+
+import multer from "multer"; import { unlink } from 'fs';
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        cb(null, 'public')
+    },
+    filename: (req, file, cb) => {
+        cb(null, Date.now() + '-' + file.originalname)
+    },
+});
+const upload = multer({
+    storage: storage,
+});
+app.post("/postCertificate", upload.single("file"), (req, res) => {
+    const user = {
+        name: req.body.name,
+        expirydate: req.body.expirydate,
+        file: req.file.filename,
+        emp_id: req.body.emp_id,
+    };
+    console.log(user);
+    mysqlConnection.query(
+        `INSERT INTO seroboard.s_certificate_details (scd_name, scd_expiry_date,scd_certificate_file,scd_ss_employee_id)
+    VALUES ('${user.name}', '${user.expirydate}', '${user.file}','${user.emp_id}');`,
+        (err) => {
+            if (err) {
+                console.log(err);
+                res.send("Unable to update the user");
+            } else res.send("User Added Successfully");
+        }
+    );
+});
+app.get("/getCertificateWrtStudent", (req, res) => {
+
+    mysqlConnection.query(
+        `select scd_id, scd_name,DATE_FORMAT(scd_expiry_date, '%Y-%m-%d') as scd_expiry_date,scd_certificate_file from seroboard.s_certificate_details where scd_ss_employee_id ='API2730';`,
+        (err, row) => {
+            if (err) {
+                console.log(err);
+                res.send("unable to fetch the certificates");
+            } else {
+
+                const pic = [];
+                let i = 0;
+                row.forEach(element => {
+                    pic[i] = {
+                        "slno": i + 1,
+                        "id": element.scd_id,
+                        "filename": "" + element.scd_certificate_file,
+                        "certificateName": element.scd_name,
+                        "expiryDate": element.scd_expiry_date
+                    }
+                    i++;
+                });
+                //res.download(pic);
+                console.log(pic);
+                res.send(pic);
+            }
+        }
+    );
+
+
+});
+
+app.get("/viewCertificateWrtStudent/:filename", (req, res) => {
+    const fileUrl = 'http://localhost:3005/public/' + req.params.filename;
+
+    //res.send(` <img src=${fileUrl} />`)
+    res.download('./public/' + req.params.filename)
+
+});
+
+
+//delete the existing user
+app.delete("/deleteCertificateWrtStudent/:id", (req, res) => {
+    const id = req.params.id
+    let filename = '';
+    console.log("my", id)
+    mysqlConnection.query(`select scd_certificate_file FROM seroboard.s_certificate_details WHERE scd_id = ${id}`,
+        (err, row) => {
+            if (err) {
+                console.log(err);
+                res.send("Certificate not found");
+            } else {
+                filename = "" + row[0].scd_certificate_file;
+                //console.log("inside",filename)
+            }
+        }
+    )
+
+    mysqlConnection.query(`DELETE FROM seroboard.s_certificate_details WHERE scd_id = ${id}`, err => {
+        if (err) {
+            console.log(err)
+            res.status(400).json({
+                status: {
+                    success: false,
+                    code: 400,
+                    message: "unauthorized"
+                },
+                data: "unable to delete the certificate"
+            })
+        }
+        else {
+            unlink(`./public/${filename}`, (err) => {
+                if (err) throw err;
+            });
+            res.status(200).json({
+                status: {
+                    success: true,
+                    code: 200,
+                    message: "authorised"
+                }, data: "Certification deleted successfully"
+            })
+
+        }
+    })
+});
+
 
 
